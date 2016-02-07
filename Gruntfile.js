@@ -424,6 +424,17 @@ module.exports = function (grunt) {
         configFile: 'test/karma.conf.js',
         singleRun: true
       }
+    },
+    processhtml: {
+      dist: {}
+    },
+    less: {
+      options: {
+        paths: ["<%= yeoman.app %>/styles"]
+      },
+      files: {
+        "<%= yeoman.dist %>/styles/main-less.css": "<%= yeoman.app %>/styles/styles.less"
+      }
     }
   });
 
@@ -460,6 +471,7 @@ module.exports = function (grunt) {
   grunt.registerTask('build', [
     'clean:dist',
     'wiredep',
+    'processhtml',
     'useminPrepare',
     'concurrent:dist',
     'postcss',
@@ -467,6 +479,7 @@ module.exports = function (grunt) {
     'concat',
     'ngAnnotate',
     'copy:dist',
+    'less',
     'cdnify',
     'cssmin',
     'uglify',
