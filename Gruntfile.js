@@ -61,8 +61,8 @@ module.exports = function (grunt) {
         },
         files: [
           '<%= yeoman.app %>/{,*/}*.html',
-          '.tmp/styles/{,*/}*.css',
-          '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
+          '.tmp/styles/**/*.css',
+          '<%= yeoman.app %>/images/**/*.{png,jpg,jpeg,gif,webp,svg}'
         ]
       }
     },
@@ -72,8 +72,8 @@ module.exports = function (grunt) {
       options: {
         port: 9000,
         // Change this to '0.0.0.0' to access the server from outside.
-        // hostname: 'localhost',
-        hostname: '192.168.0.7',
+        hostname: 'localhost',
+        // hostname: '192.168.0.7',
         livereload: 35729
       },
       livereload: {
@@ -128,7 +128,8 @@ module.exports = function (grunt) {
       all: {
         src: [
           'Gruntfile.js',
-          '<%= yeoman.app %>/scripts/{,*/}*.js'
+          '<%= yeoman.app %>/scripts/{,*/}*.js',
+          '!<%= yeoman.app %>/scripts/vendor/**'
         ]
       },
       test: {
@@ -256,7 +257,7 @@ module.exports = function (grunt) {
 
     // Performs rewrites based on filerev and the useminPrepare configuration
     usemin: {
-      html: ['<%= yeoman.dist %>/{,*/}*.html'],
+      // html: ['<%= yeoman.dist %>/{,*/}*.html'],
       css: ['<%= yeoman.dist %>/styles/{,*/}*.css'],
       js: ['<%= yeoman.dist %>/scripts/{,*/}*.js'],
       options: {
@@ -266,7 +267,11 @@ module.exports = function (grunt) {
           '<%= yeoman.dist %>/styles'
         ],
         patterns: {
-          js: [[/(images\/[^''""]*\.(png|jpg|jpeg|gif|webp|svg))/g, 'Replacing references to images']]
+          js: [[/(images\/[^''""]*\.(png|jpg|jpeg|gif|webp|svg))/g, 'Replacing references to images']],
+          css: [
+            [/(images\/.*?\.(?:gif|jpeg|jpg|png|webp|svg))/gm, 'Update the JS to reference our revved images'],
+            [/(images\/.*\/.*?\.(?:gif|jpeg|jpg|png|webp|svg))/gm, 'Update the JS to reference our revved images']
+          ]
         }
       }
     },
@@ -275,6 +280,17 @@ module.exports = function (grunt) {
     // By default, your `index.html`'s <!-- Usemin block --> will take care of
     // minification. These next options are pre-configured if you do not wish
     // to use the Usemin blocks.
+    cssmin: {
+      dist: {
+        files: {
+          '<%= yeoman.dist %>/styles/main.css': ['.tmp/styles/*.css'],
+          '<%= yeoman.dist %>/styles/default/main.css': ['.tmp/styles/default/**/*.css']
+          // '<%= yeoman.dist %>/styles/main.css': [
+          //   '.tmp/styles/{,*/}*.css'
+          // ]
+        }
+      }
+    },
     // cssmin: {
     //   dist: {
     //     files: {
@@ -330,7 +346,7 @@ module.exports = function (grunt) {
         files: [{
           expand: true,
           cwd: '<%= yeoman.dist %>',
-          src: ['*.html'],
+          src: ['*.html', 'views/{,*/}*.html'],
           dest: '<%= yeoman.dist %>'
         }]
       }
@@ -371,6 +387,15 @@ module.exports = function (grunt) {
 
     // Copies remaining files to places other tasks can use
     copy: {
+      langs: {
+        files: [{
+          expand: true,
+          cwd: '<%= yeoman.app %>/scripts/vendor/tinymce',
+          src: 'langs/**',
+          dest: 'bower_components/tinymce-dist/'
+          }
+        ]
+      },
       dist: {
         files: [{
           expand: true,
@@ -379,10 +404,20 @@ module.exports = function (grunt) {
           dest: '<%= yeoman.dist %>',
           src: [
             '*.{ico,png,txt}',
+            '.htaccess',
             '*.html',
+            'views/**/*.html',
             'images/{,*/}*.{webp}',
-            'styles/fonts/{,*/}*.*'
+            'styles/fonts/{,*/}*.*',
+            'fonts/{,*/}*.*',
+            'favicon/*/*.{png,ico,xml,json}'
           ]
+        }, {
+          expand: true,
+          dot: true,
+          cwd: '.tmp/concat',
+          dest: '<%= yeoman.dist %>',
+          src: 'scripts/*.js'
         }, {
           expand: true,
           cwd: '.tmp/images',
@@ -393,6 +428,21 @@ module.exports = function (grunt) {
           cwd: 'bower_components/bootstrap/dist',
           src: 'fonts/*',
           dest: '<%= yeoman.dist %>'
+        }, {
+          expand: true,
+          cwd: 'bower_components',
+          src: '**/*.swf',
+          dest: '<%= yeoman.dist %>/swf'
+        }, {
+          expand: true,
+          cwd: '<%= yeoman.app %>/scripts/vendor',
+          src: '**/*.{js,swf,swz,eot,svg,ttf,woff,css,png}',
+          dest: '<%= yeoman.dist %>/scripts/vendor'
+        }, {
+          expand: true,
+          cwd: 'bower_components/tinymce-dist',
+          src: '**/*.*',
+          dest: '<%= yeoman.dist %>/scripts/vendor/tinymce-dist'
         }]
       },
       styles: {
@@ -425,12 +475,77 @@ module.exports = function (grunt) {
         singleRun: true
       }
     },
-    processhtml: {
-      dist: {}
+    htmlrefs: {
+      dist: {
+        src: '<%= yeoman.dist %>/index.html',
+        dest: '<%= yeoman.dist %>/index.html'
+      }
+    },
+
+    // package.jsonからバージョン番号を取得する
+    pkg: grunt.file.readJSON('package.json'),
+    // gitリポジトリの状態を取得する
+    'git-describe': {
+      options: {
+      },
+      dist: {
+      }
+    },
+    // スクリプト中のキーワードを置換する
+    replace: {
+      dist: {
+        src: ['dist/scripts/scripts.*.js'],
+        overwrite: true,
+        replacements: [{
+          from: '__VERSION_VERSION__',
+          to: function(){
+            return grunt.config('version').version;
+          }
+        }, {
+          from: '__VERSION_DESCRIBE__',
+          to: function(){
+            return grunt.config('version').revision.describe;
+          }
+        }, {
+          from: '__VERSION_TAG__',
+          to: function(){
+            return grunt.config('version').revision.tag;
+          }
+        }, {
+          from: '__VERSION_PROCEED__',
+          to: function(){
+            return grunt.config('version').revision.proceed;
+          }
+        }, {
+          from: '__VERSION_HASH__',
+          to: function(){
+            return grunt.config('version').revision.hash;
+          }
+        }, {
+          from: '__VERSION_DIRTY__',
+          to: function(){
+            return grunt.config('version').revision.dirty;
+          }
+        }, {
+          from: '__VERSION_BRANCH__',
+          to: function(){
+            return grunt.config('version').branch;
+          }
+        }, {
+          from: '__VERSION_DATE__',
+          to: function(){
+            return grunt.config('version').date;
+          }
+        }]
+      }
     },
     less: {
       options: {
-        paths: ["<%= yeoman.app %>/styles"]
+        paths: ["<%= yeoman.app %>"],
+        "sourceMap": true,
+        "sourceMapFilename": '<%= yeoman.dist %>/styles/main-less.css.map',
+        "sourceMapURL": 'main-less.css.map',
+        "outputSourceFiles": true
       },
       files: {
         "<%= yeoman.dist %>/styles/main-less.css": "<%= yeoman.app %>/styles/styles.less"
@@ -438,6 +553,46 @@ module.exports = function (grunt) {
     }
   });
 
+
+  // タグ名、コミットハッシュ値等を取得する
+  grunt.registerTask('saveRevision', function() {
+    grunt.event.once('git-describe', function (rev) {
+      grunt.log.writeln("Git Revision: " + rev);
+      var revision = {
+        "describe": rev.shift(),
+        "tag": rev.shift(),
+        "proceed": rev.shift(),
+        "hash": rev.shift(),
+        "dirty": rev.shift()
+      };
+      // オプション情報として保持する
+      grunt.option('gitRevision', revision);
+    });
+    grunt.task.run('git-describe');
+  });
+
+  // バージョン情報をファイルに書き出す
+  grunt.registerTask('tag-revision', 'Tag the current build revision', function () {
+    grunt.task.requires('git-describe');
+    var version = {
+      version: grunt.config('pkg.version'),
+      revision: grunt.option('gitRevision'),
+      branch: grunt.config('gitinfo.local.branch.current.name'),
+      date: grunt.template.today()
+    };
+    // 設定に書き出す
+    grunt.config('version', version);
+    // バージョン情報をファイルに書き出す
+    grunt.file.write(grunt.config('yeoman.dist') + '/version.json', JSON.stringify(version));
+  });
+
+  // バージョン情報の書き出しとスクリプト中のキーワード置換タスク
+  grunt.registerTask('version', [
+    'gitinfo',
+    'saveRevision',
+    'tag-revision'// ,
+    // 'replace'
+  ]);
 
   grunt.registerTask('serve', 'Compile then start a connect web server', function (target) {
     if (target === 'dist') {
@@ -471,21 +626,23 @@ module.exports = function (grunt) {
   grunt.registerTask('build', [
     'clean:dist',
     'wiredep',
-    'processhtml',
     'useminPrepare',
     'concurrent:dist',
     'postcss',
     'ngtemplates',
     'concat',
     'ngAnnotate',
+    'copy:langs',
     'copy:dist',
-    'less',
+    'htmlrefs',
     'cdnify',
+    'less',
     'cssmin',
-    'uglify',
+    // 'uglify',
     'filerev',
     'usemin',
-    'htmlmin'
+    // 'htmlmin'
+    'version'
   ]);
 
   grunt.registerTask('default', [

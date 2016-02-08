@@ -1,0 +1,16 @@
+{
+    "duplicateProperty": {
+        "exclude": [
+            "white-space",
+            "background-image",
+            "outline",
+            "border"
+        ]
+    },
+    "propertyOrdering": null,
+    "hexLength": null,
+    "decimalZero": "none",
+    "qualifyingElement": null,
+    "zeroUnit": {"style": "no_unit"},
+    "idSelector": null
+}
